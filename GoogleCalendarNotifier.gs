@@ -1,5 +1,4 @@
 
-
 var CONSUMER_KEY = "42";
 var CONSUMER_SECRET = "42";
 
@@ -11,18 +10,18 @@ function checkEventsNextDay() {
   if (ScriptProperties.getProperty("fitbitConsumerKey") == "" || ScriptProperties.getProperty("fitbitConsumerKey") == null
       || ScriptProperties.getProperty("fitbitConsumerSecret") == "" || ScriptProperties.getProperty("fitbitConsumerSecret") == null)
     init();
-
+  
   //oAuth
   authorize();
 
   var deviceIds = getDevices();
 
   clearDisabledAlarm(deviceIds);
-
-
+  
+  
   var calendars = CalendarApp.getAllCalendars();
   var today = new Date();
-
+  
   for (i in calendars) {
     var events = calendars[i].getEventsForDay(today);
 
@@ -30,7 +29,7 @@ function checkEventsNextDay() {
       var dateToNotify = events[j].getStartTime().getTime();
       var dateNotification = dateToNotify - (60 * 15 * 1000); //on préviens 15 minutes à l'avance
 
-      if (dateNotification > new Date().getTimes())
+      if (dateNotification > new Date().getTime())
         addAlertOnFitbitDevice(dateNotification, deviceIds);
     };
   };
@@ -40,7 +39,7 @@ function checkEventsNextDay() {
 
 // if we use more than one device, all device will receive notifications
 function getDevices() {
-
+  
   var options = {
     "oAuthServiceName" : "Fitbit",
     "oAuthUseToken" : "always"
@@ -48,7 +47,7 @@ function getDevices() {
 
   var res = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices.json", options);
   var json = Utilities.jsonParse(res.getContentText());
-
+  
   var ret = [];
   for (i in json) {
     ret.push(json[i].id);
@@ -73,10 +72,15 @@ function addAlertOnFitbitDevice(timestamp, deviceIds) {
       "weekDays":[],
     }
   };
-
+ 
   // for each device of your account
-  for (i in deviceIds)
+  for (i in deviceIds) {
+    try {
       UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", options);
+    } catch (err) {
+      Logger.log("Too many events in your calendar, fitbit cannot support all of them...");
+    }
+  }
 }
 
 
@@ -84,7 +88,7 @@ function addAlertOnFitbitDevice(timestamp, deviceIds) {
 // Each alarm is in mode "recurring:false", so they are disabled after usage.
 // Here, we remove old notifications.
 function clearDisabledAlarm(deviceIds) {
-
+  
   var optionsGet = {
     "oAuthServiceName" : "Fitbit",
     "oAuthUseToken" : "always",
@@ -95,10 +99,10 @@ function clearDisabledAlarm(deviceIds) {
     "oAuthUseToken" : "always",
     "method":"DELETE",
   };
-
+  
   // for each device
   for (i in deviceIds) {
-
+    
     var res = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", optionsGet);
     var alarms = Utilities.jsonParse(res.getContentText());
 
@@ -107,7 +111,7 @@ function clearDisabledAlarm(deviceIds) {
       if (alarms.trackerAlarms[j].enabled == false)
         UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms/" + alarms.trackerAlarms[j].alarmId + ".json", optionsDelete);
     }
-
+    
   }
 };
 
