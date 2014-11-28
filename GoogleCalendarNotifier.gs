@@ -22,17 +22,24 @@ function checkEventsNextDay() {
   var calendars = CalendarApp.getAllCalendars();
   var today = new Date();
   
+  // for each calendar in my google account
   for (i in calendars) {
-    var events = calendars[i].getEventsForDay(today);
-
-    for (j in events) {
-      var dateToNotify = events[j].getStartTime().getTime();
-      var dateNotification = dateToNotify - (60 * 15 * 1000); //on préviens 15 minutes à l'avance
-
-      if (dateNotification > new Date().getTime())
-        addAlertOnFitbitDevice(dateNotification, deviceIds);
-    };
-  };
+    // if this calendar is not hidden
+    if (calendars[i].isHidden() == false) {
+      
+      var events = calendars[i].getEventsForDay(today);
+      
+      // for each event in this calendar
+      for (j in events) {
+        var dateToNotify = events[j].getStartTime().getTime();
+        var dateNotification = dateToNotify - (60 * 15 * 1000); //on préviens 15 minutes à l'avance
+        
+        if (dateNotification > new Date().getTime())
+          addAlertOnFitbitDevice(dateNotification, deviceIds);
+      };
+      
+    }
+  }
 };
 
 
@@ -45,7 +52,7 @@ function getDevices() {
     "oAuthUseToken" : "always"
   };
 
-  var res = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices.json", options);
+  var res = UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/devices.json", options);
   var json = Utilities.jsonParse(res.getContentText());
   
   var ret = [];
@@ -76,7 +83,7 @@ function addAlertOnFitbitDevice(timestamp, deviceIds) {
   // for each device of your account
   for (i in deviceIds) {
     try {
-      UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", options);
+      UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", options);
     } catch (err) {
       Logger.log("Too many events in your calendar, fitbit cannot support all of them...");
     }
@@ -103,13 +110,13 @@ function clearDisabledAlarm(deviceIds) {
   // for each device
   for (i in deviceIds) {
     
-    var res = UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", optionsGet);
+    var res = UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms.json", optionsGet);
     var alarms = Utilities.jsonParse(res.getContentText());
 
     // for each alarm in each device
     for (j in alarms.trackerAlarms) {
       if (alarms.trackerAlarms[j].enabled == false)
-        UrlFetchApp.fetch("http://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms/" + alarms.trackerAlarms[j].alarmId + ".json", optionsDelete);
+        UrlFetchApp.fetch("https://api.fitbit.com/1/user/-/devices/tracker/" + deviceIds[i] + "/alarms/" + alarms.trackerAlarms[j].alarmId + ".json", optionsDelete);
     }
     
   }
@@ -133,9 +140,9 @@ function init() {
 // OAuth authentification to fitbit API
 function authorize() {
   var oAuthConfig = UrlFetchApp.addOAuthService("Fitbit");
-  oAuthConfig.setAccessTokenUrl("http://api.fitbit.com/oauth/access_token");
-  oAuthConfig.setRequestTokenUrl("http://api.fitbit.com/oauth/request_token");
-  oAuthConfig.setAuthorizationUrl("http://api.fitbit.com/oauth/authorize");
+  oAuthConfig.setAccessTokenUrl("https://api.fitbit.com/oauth/access_token");
+  oAuthConfig.setRequestTokenUrl("https://api.fitbit.com/oauth/request_token");
+  oAuthConfig.setAuthorizationUrl("https://api.fitbit.com/oauth/authorize");
   oAuthConfig.setConsumerKey(ScriptProperties.getProperty("fitbitConsumerKey"));
   oAuthConfig.setConsumerSecret(ScriptProperties.getProperty("fitbitConsumerSecret"));
 }
